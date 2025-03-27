@@ -1,0 +1,23 @@
+version:  2
+
+sources:
+  - name: raw_src # friendly schema alias name for our actual schema where raw data exists
+    description:  "This schema contains raw source data from the transactional system"
+    database: aw_db # The database name in Snowflake
+    schema: raw_src # The schema where raw tables are stored
+
+    tables:
+      - name: src_accounts
+      - name: src_channel_segment
+      - name: src_contracts
+      - name: src_cost_center_segment
+      - name: src_fraud_monitoring
+      - name: src_general_ledger
+      - name: investment_portfolio
+      - name: src_loans
+      - name: src_payroll
+      - name: src_transactions
+        loaded_at_field: ingestion_timestamp
+        freshness:
+          warn_after: {count: 1, period: hour}
+          error_after: {count: 24, period: hour}
