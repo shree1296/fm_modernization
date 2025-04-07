@@ -37,6 +37,11 @@ clean-targets:         # directories to be removed by `dbt clean`
 
 models:
   my_new_project:
-    # Applies to all files under models/example/
-    example:
-      +materialized: table
+    stg:
+      +schema: staging  # Ensure all staging models go to 'staging'
+      +materialized: view
+
+
+vars:
+  default_region: "US_EAST"  # Set a custom variable default region (used if not explicitly provided)
+  allowed_regions: ["US_EAST", "US_WEST", "EUROPE", "APAC", "ME"]  # Allowed regions custom variable

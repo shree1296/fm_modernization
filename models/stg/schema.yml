@@ -1,0 +1,505 @@
+version: 2
+
+
+models:
+  - name: stg_accounts
+    description: "Staging table for accounts."
+    columns:
+      - name: ACCOUNT_ID
+        description: "Primary key for the account."
+        tests:
+          - unique
+          - not_null
+
+      - name: CUSTOMER_ID
+        description: "Foreign key to dim_customers."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_customers')
+              field: CUSTOMER_ID
+
+
+
+  - name: stg_channel_segment
+    description: "Staging table for channel segment."
+    columns:
+      - name: SEGMENT_ID
+        tests:
+          - unique
+          - not_null
+      - name: ENABLED
+        tests:
+          - accepted_values:
+              values: [true, false]
+      - name: IS_ACTIVE
+        tests:
+          - accepted_values:
+              values: [true, false]
+
+  - name: stg_contracts
+    description: "Staging table for contracts."
+    columns:
+      - name: CONTRACT_ID
+        description: "Primary key for the contract."
+        tests:
+          - unique
+          - not_null
+
+      - name: CUSTOMER_ID
+        description: "Foreign key to dim_customers."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_customers')
+              field: CUSTOMER_ID
+
+
+
+  - name: stg_fraud_monitoring
+    description: "Staging table for fraud monitoring."
+    columns:
+      - name: FRAUD_ID
+        tests:
+          - unique
+          - not_null
+      - name: STATUS
+        description: "Status should be one of the predefined values"
+        tests:
+          - accepted_values:
+              values: ["RESOLVED", "UNDER INVESTIGATION", "OPEN"]
+
+
+  - name: stg_general_ledger
+    description: "Staging table for general ledger."
+    columns:
+      - name: LEDGER_ID
+        tests:
+          - unique
+          - not_null
+
+      - name: ACCOUNT_ID
+        tests:
+          - relationships:
+              to: ref('dim_accounts')
+              field: ACCOUNT_ID
+
+      - name: TRANSACTION_DATE
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: "'1900-01-01'"
+              max_value: "current_date"
+
+
+
+  - name: stg_investment_portfolio
+    description: "Staging table for investment portfolio."
+    columns:
+    - name: INVESTMENT_ID
+      description: "Unique identifier for each investment."
+      tests:
+        - unique
+        - not_null
+
+    - name: CUSTOMER_ID
+      description: "Foreign key to dim_customers."
+      tests:
+          - not_null
+          - relationships:
+              to: ref('dim_customers')
+              field: CUSTOMER_ID
+
+    - name: INVESTMENT_AMOUNT
+      description: "Investment amount should be non-negative."
+      tests:
+        - not_null
+        - dbt_expectations.expect_column_values_to_be_between:
+            min_value: 0
+
+
+
+  - name: stg_loans
+    description: "Staging table for loans."
+    columns:
+    - name: LOAN_ID
+      tests:
+        - unique
+        - not_null
+
+    - name: CUSTOMER_ID
+      tests:
+          - not_null
+          - relationships:
+              to: ref('dim_customers')
+              field: CUSTOMER_ID
+
+  - name: stg_payroll
+    description: "Staging table for payroll."
+    columns:
+    - name: PAYROLL_ID
+      tests:
+        - unique
+        - not_null
+
+    - name: EMPLOYEE_ID
+      tests:
+        - not_null
+
+    - name: SALARY_AMOUNT
+      tests:
+        - not_null
+
+    - name: TAX_DEDUCTION
+      tests:
+        - not_null
+
+  - name: stg_transactions
+    description: "Staging table for transactions."
+    columns:
+      - name: TRANSACTION_ID
+        tests:
+          - unique
+          - not_null
+      - name: ACCOUNT_ID
+        tests:
+          - relationships:
+              to: ref('dim_accounts')
+              field: ACCOUNT_ID
+      - name: TRANSACTION_DATE
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: "'1900-01-01'"
+              max_value: "current_date"
+      - name: AMOUNT
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+      - name: TRANSACTION_TYPE
+        tests:
+          - accepted_values:
+              values: ['DEBIT', 'CREDIT', 'REFUND']
+  - name: dim_customers
+    description: "Customer dimension containing account, loan, contract, and investment details."
+    columns:
+      - name: CUSTOMER_ID
+        description: "Primary key for customers."
+        tests:
+          - unique
+          - not_null
+
+      - name: ACCOUNT_ID
+        description: "Associated account."
+        tests:
+          - relationships:
+              to: ref('stg_accounts')
+              field: ACCOUNT_ID
+
+      - name: BALANCE
+        description: "Customer account balance (should not be negative)."
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+
+      - name: PRINCIPAL_AMOUNT
+        description: "Loan principal amount (should not be negative)."
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+
+      - name: INVESTMENT_AMOUNT
+        description: "Investment amount (should not be negative)."
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+
+      - name: INTEREST_RATE
+        description: "Interest rate should be between 0% and 100%."
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 100
+
+  - name: dim_accounts
+    description: "Account dimension containing details about transactions and balances."
+    columns:
+      - name: ACCOUNT_ID
+        description: "Primary key for accounts."
+        tests:
+          - unique
+          - not_null
+
+      - name: CUSTOMER_ID
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_customers')
+              field: CUSTOMER_ID
+
+      - name: BALANCE
+        description: "Account balance (should not be negative)."
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+
+      - name: TOTAL_DEBITS
+        description: "Sum of all debits (should not be negative)."
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+
+      - name: TOTAL_CREDITS
+        description: "Sum of all credits (should not be negative)."
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+
+  - name: dim_loans
+    description: "Loan dimension containing details of all loans issued."
+    columns:
+    - name: LOAN_ID
+      description: "Primary key for loans."
+      tests:
+        - unique
+        - not_null
+
+    - name: CUSTOMER_ID
+      description: "Customer associated with the loan."
+      tests:
+        - relationships:
+            to: ref('dim_customers')
+            field: CUSTOMER_ID
+
+    - name: PRINCIPAL_AMOUNT
+      description: "Original loan amount (should be greater than 0)."
+      tests:
+        - dbt_expectations.expect_column_values_to_be_between:
+            min_value: 1
+
+    - name: INTEREST_RATE
+      description: "Interest rate applied (should be non-negative)."
+      tests:
+        - dbt_expectations.expect_column_values_to_be_between:
+            min_value: 0
+
+    - name: STATUS
+      description: "Loan status should be in (Active, Closed, Defaulted)."
+      tests:
+        - accepted_values:
+            values: ['Active', 'Defaulted', 'Closed']
+
+    - name: LOAN_DURATION_YEARS
+      description: "Duration of the loan in years (should be positive)."
+      tests:
+        - dbt_expectations.expect_column_values_to_be_between:
+            min_value: 1
+
+  - name: dim_investment_portfolio
+    description: "Investment portfolio dimension containing customer investments."
+    columns:
+    - name: INVESTMENT_ID
+      description: "Primary key for investments."
+      tests:
+        - unique
+        - not_null
+
+    - name: CUSTOMER_ID
+      description: "Customer associated with the investment."
+      tests:
+        - relationships:
+            to: ref('dim_customers')
+            field: CUSTOMER_ID
+
+    - name: INVESTMENT_AMOUNT
+      description: "Initial investment amount (should be non-negative)."
+      tests:
+        - dbt_expectations.expect_column_values_to_be_between:
+            min_value: 0
+
+    - name: CURRENT_VALUE
+      description: "Current market value of the investment (should be non-negative)."
+      tests:
+        - dbt_expectations.expect_column_values_to_be_between:
+            min_value: 0
+
+    - name: INVESTMENT_GROWTH
+      description: "Investment growth calculated as CURRENT_VALUE - INVESTMENT_AMOUNT."
+      tests:
+        - not_null
+
+  - name: dim_general_ledger
+    description: "General ledger transactions for accounts."
+    columns:
+      - name: LEDGER_ID
+        description: "Primary key for general ledger transactions."
+        tests:
+          - unique
+          - not_null
+
+      - name: ACCOUNT_ID
+        description: "Foreign key linking to dim_accounts."
+        tests:
+          - relationships:
+              to: ref('dim_accounts')
+              field: ACCOUNT_ID
+
+      - name: TRANSACTION_DATE
+        description: "Date of the financial transaction."
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: "'2000-01-01'"
+              max_value: "current_date"
+
+      - name: BALANCE
+        description: "Account balance (should not be negative)."
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+
+      - name: NET_CHANGE
+        description: "Computed as CREDIT_AMOUNT - DEBIT_AMOUNT."
+        tests:
+          - not_null
+
+  - name: dim_transactions
+    description: "Detailed transaction records."
+    columns:
+    - name: TRANSACTION_ID
+      description: "Primary key for transactions."
+      tests:
+        - unique
+        - not_null
+
+    - name: ACCOUNT_ID
+      description: "Foreign key linking to dim_accounts."
+      tests:
+        - relationships:
+            to: ref('dim_accounts')
+            field: ACCOUNT_ID
+
+    - name: CUSTOMER_ID
+      description: "Foreign key linking to dim_customers."
+      tests:
+        - relationships:
+            to: ref('dim_customers')
+            field: CUSTOMER_ID
+
+    - name: TRANSACTION_DATE
+      description: "Date of the transaction."
+      tests:
+        - not_null
+        - dbt_expectations.expect_column_values_to_be_between:
+            min_value: "'2000-01-01'"
+            max_value: "current_date"
+
+    - name: TRANSACTION_TYPE
+      description: "Transaction type should be one of ['DEBIT', 'CREDIT', 'REFUND']."
+      tests:
+        - accepted_values:
+            values: ['DEBIT', 'CREDIT', 'REFUND']
+
+    - name: AMOUNT
+      description: "Transaction amount (should be positive)."
+      tests:
+        - dbt_expectations.expect_column_values_to_be_between:
+            min_value: 1
+
+    - name: STATUS
+      description: "Transaction status should be one of ['PENDING', 'COMPLETED', 'FAILED']."
+      tests:
+        - accepted_values:
+            values: ['PENDING', 'COMPLETED', 'FAILED']
+
+
+  - name: dim_fraud_monitoring
+    description: "Fraud monitoring data, tracking detected fraudulent transactions."
+    columns:
+    - name: FRAUD_ID
+      description: "Primary key for fraud cases."
+      tests:
+        - unique
+        - not_null
+
+    - name: TRANSACTION_ID
+      description: "Foreign key linking to transactions."
+      tests:
+        - relationships:
+            to: ref('dim_transactions')
+            field: TRANSACTION_ID
+
+    - name: ACCOUNT_ID
+      description: "Foreign key linking to accounts."
+      tests:
+        - relationships:
+            to: ref('dim_accounts')
+            field: ACCOUNT_ID
+
+    - name: CUSTOMER_ID
+      description: "Foreign key linking to customers."
+      tests:
+        - relationships:
+            to: ref('dim_customers')
+            field: CUSTOMER_ID
+
+
+    - name: FRAUD_TYPE
+      description: "Type of fraud detected."
+      tests:
+        - not_null
+
+    - name: resolution_status
+      description: "Fraud case status."
+      tests:
+        - accepted_values:
+            values: ['OPEN', 'CLOSED', 'INVESTIGATING', 'RESOLVED', 'UNDER INVESTIGATION']
+
+
+  - name: DIM_PAYROLL
+    description: "Payroll details of employees."
+    columns:
+      - name: PAYROLL_ID
+        description: "Primary key for payroll records."
+        tests:
+          - unique
+          - not_null
+
+      - name: EMPLOYEE_ID
+        description: "Foreign key linking to employees."
+        tests:
+          - relationships:
+              to: ref('dim_employees')
+              field: EMPLOYEE_ID
+
+      - name: PAY_DATE
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: "'2000-01-01'::DATE"
+              max_value: "'2055-01-01'::DATE"
+              config:
+                severity: warn
+
+
+      - name: SALARY_AMOUNT
+        description: "Salary amount should be greater than 0."
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 1000000  # Arbitrary high limit
+
+      - name: TAX_DEDUCTION
+        description: "Tax deduction should be between 0 and salary amount."
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: "SALARY_AMOUNT"
+
+      - name: NET_SALARY
+        tests:
+          - dynamic_expression_test:
+              model_name: dim_payroll
+              expression: "ABS(COALESCE(NET_SALARY,0) - (COALESCE(SALARY_AMOUNT,0) - COALESCE(TAX_DEDUCTION,0))) < 0.01"
+
+
+
+
+
