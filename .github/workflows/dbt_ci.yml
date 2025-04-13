@@ -22,17 +22,16 @@ jobs:
       - name: Install dbt
         run: pip install dbt-core dbt-snowflake
 
+      - name: Create profiles.yml
+        run: |
+          mkdir -p ~/.dbt
+          echo "${{ secrets.DBT_PROFILES_YML }}" > ~/.dbt/profiles.yml
+
       - name: Verify dbt version
         run: dbt --version
 
       - name: Install dependencies
         run: dbt deps
 
-      - name: Seed data
-        run: dbt seed
-
-      - name: Run dbt models
-        run: dbt run
-
-      - name: Run dbt tests
-        run: dbt test
+      - name: Build all dbt assets (excluding example)
+        run: dbt build --exclude path:models/example
